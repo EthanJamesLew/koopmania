@@ -1,4 +1,5 @@
 import numpy as np
+import sympy as sp
 from typing import Tuple, Callable, Sequence
 import scipy.integrate as scint
 import koopmania.observable as kobs
@@ -32,6 +33,25 @@ class ContinuousSystem:
     @property
     def dimension(self) -> int:
         raise NotImplementedError
+
+
+class SymbolicContinuousSystem(ContinuousSystem):
+    def __init__(self, variables: Sequence[sp.Symbol],
+                 gradient_exprs: Sequence[sp.Expr],
+                 time_var = None):
+        if time_var is None:
+            time_var = sp.symbols('_t0')
+        self._variables = [time_var, *variables]
+        self._exprs = gradient_exprs
+        self._mat = sp.Matrix(self._exprs)
+        self._fmat = sp.lambdify((self._variables,), self._mat)
+
+    def gradient(self, time: float, initial_state: np.ndarray) -> np.ndarray:
+        return np.array(self._fmat(np.array([time, *initial_state]))).flatten()
+
+    @property
+    def dimension(self) -> int:
+        return len(self._exprs)
 
 
 class GradientContinuousSystem(ContinuousSystem):

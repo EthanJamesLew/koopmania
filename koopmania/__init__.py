@@ -5,4 +5,6 @@ from koopmania.observable import (SymbolicObservable,
 
 from koopmania.dsys import KoopmanSystemEstimator
 
-from koopmania.system import KoopmanContinuousSystem, GradientContinuousSystem
+from koopmania.system import (KoopmanContinuousSystem,
+                              GradientContinuousSystem,
+                              SymbolicContinuousSystem)

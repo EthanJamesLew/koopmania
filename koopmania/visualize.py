@@ -1,5 +1,4 @@
 import numpy as np
-import koopmania.system as ksys
 
 
 class SystemViewer:
@@ -9,7 +8,7 @@ class SystemViewer:
                         'resolution': 10}
 
     def __init__(self,
-                 system: ksys.ContinuousSystem,
+                 system: 'ContinuousSystem',
                  xlim= None,
                  ylim=None,
                  visible_dims=None,
@@ -22,7 +21,7 @@ class SystemViewer:
                               'fixed_dims': fixed_dims,
                               'resolution': resolution}
         self.init_settings = {k: v for k, v in self.init_settings.items() if v is not None}
-        self.system: ksys.ContinuousSystem = system
+        self.system: 'ContinuousSystem' = system
 
     def get_settings(self, settings):
         return {**self.default_settings, **self.init_settings, **settings}
@@ -31,7 +30,7 @@ class SystemViewer:
         x = np.zeros(self.system.dimension)
         for idx, v in settings.get('fixed_dims', {}):
             x[idx] = v
-        for idx, v in zip(settings['visible_dims'], y):
+        for idx, v in zip(settings.get('visible_dims'), y):
             x[idx] = v
         return x
 
@@ -48,6 +47,33 @@ class SystemViewer:
         res = fsetting['resolution']
 
         arrow_plot(ax, arrow_fcn, xlim, ylim, res, **(quiver_args if quiver_args is not None else {}))
+        self.apply_ax(ax)
+
+    def apply_ax(self, ax, **settings):
+        fsetting = self.get_settings(settings)
+        xlim = fsetting['xlim']
+        ylim = fsetting['ylim']
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
+
+    def plot_training(self, ax, Xt, Xtp, scatter_kwargs = None, arrow_kwargs = None, **settings):
+        fsetting = self.get_settings(settings)
+        akw = {} if arrow_kwargs is None else arrow_kwargs
+        skw = {} if scatter_kwargs is None else scatter_kwargs
+        visible_dims = fsetting['visible_dims']
+        training_data_plot(ax, Xt, Xtp, visible_dims, scatter_kwargs=skw, arrow_kwargs=akw)
+        self.apply_ax(ax)
+
+    def plot_trajectory(self, ax, traj, plot_kwargs=None, **settings):
+        fsetting = self.get_settings(settings)
+        plot = {'label': 'trajectory'}
+        if plot_kwargs is not None:
+            plot.update(plot_kwargs)
+
+        visible_dims = fsetting['visible_dims']
+        print(visible_dims)
+        tr = traj[list(visible_dims), :]
+        ax.plot(*tr, **plot)
 
 
 def arrow_plot(ax, arrow_fcn, xlim, ylim, number, **kwargs):
@@ -58,22 +84,24 @@ def arrow_plot(ax, arrow_fcn, xlim, ylim, number, **kwargs):
     arrows = (np.array([arrow_fcn(y) for y in yall])).reshape((*x.shape, 2))
     u = arrows[:, :, 0]
     v = arrows[:, :, 1]
-    defaults = {'alpha': 0.2}
+    defaults = {'alpha': 0.2, 'width': 0.005}
     defaults.update(kwargs)
     ax.quiver(x, y, u, v, **defaults)
 
 
-def training_data_plot(ax, X, Xp, scatter_kwargs=None, arrow_kwargs=None):
+def training_data_plot(ax, X, Xp, visible_dims, scatter_kwargs=None, arrow_kwargs=None):
     scatter = {'s': 5, 'label': 'Training Data'}
+    X, Xp = X[list(visible_dims), :], Xp[list(visible_dims), :]
+
     if scatter_kwargs is not None:
         scatter.update(scatter_kwargs)
 
-    arrow = {'width': 0.009, 'head_width': 0.04, 'length_includes_head':True, 'edgecolor':'b'}
+    arrow = {'width': 0.009, 'head_width': 0.04, 'length_includes_head':True, 'edgecolor':'b', 'alpha': 0.5}
     if arrow_kwargs is not None:
-        scatter.update(arrow_kwargs)
+        arrow.update(arrow_kwargs)
 
     # plot training data
-    ax[0].scatter(*np.hstack((X, Xp)), **scatter)
+    ax.scatter(*np.hstack((X, Xp)), **scatter)
 
     for x0, x1 in zip(X.T, Xp.T):
-      ax[0].arrow(*x0, *(x1-x0), **arrow)
+      ax.arrow(*x0, *(x1-x0), **arrow)
