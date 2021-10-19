@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Sequence
 import scipy.integrate as scint
 import koopmania.observable as kobs
 
@@ -16,6 +16,18 @@ class ContinuousSystem:
 
     def gradient(self, time: float, initial_state: np.ndarray) -> np.ndarray:
         pass
+
+    def create_dataset(self, initial_values, tspan, sampling_period):
+        Xt, Xtp = [], []
+        for iv in initial_values:
+            t = self.trajectory(iv, tspan, sampling_period=sampling_period)
+            x = t[:, :-1]
+            xn = t[:, 1:]
+            Xt.append(x)
+            Xtp.append(xn)
+        Xt = np.hstack(Xt)
+        Xtp = np.hstack(Xtp)
+        return Xt, Xtp
 
     @property
     def dimension(self) -> int:
