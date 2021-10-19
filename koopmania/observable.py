@@ -24,7 +24,7 @@ class KoopmanObservable(abc.ABC):
 
 class IdentityObservable(KoopmanObservable):
     def obs_fcn(self, X: np.ndarray) -> np.ndarray:
-        return np.atleast_2d(X)
+        return np.atleast_2d(X).T
 
     def obs_grad(self, X: np.ndarray) -> np.ndarray:
         assert len(X.shape) == 1
@@ -46,7 +46,7 @@ class SymbolicObservable(KoopmanObservable):
         return np.array(self._g(list(X.flatten())))
 
     def obs_grad(self, X: np.ndarray) -> np.ndarray:
-        return np.array(self._gd(list(X)))
+        return np.array(self._gd(list(X))).T
 
     def __add__(self, obs: 'SymbolicObservable'):
         return SymbolicObservable(list({*self._variables, *obs._variables}),

@@ -59,11 +59,3 @@ def get_linear_transform(Xc, Xcp, g, sampling_period, r=30, continuous=True):
         return A
 
 
-def get_traj(system, iv, tmax=1.0, sampling_period=0.1):
-    """given a system with the signature f(t, x), return a time evolution
-    trajectory at initial value iv"""
-    sol = scint.solve_ivp(system,
-                          [0, tmax],
-                          iv,
-                          t_eval=np.arange(0, tmax, sampling_period))
-    return sol.y

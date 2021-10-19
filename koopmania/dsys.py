@@ -1,7 +1,10 @@
 import numpy as np
-from koopmania.dmd import dmd, get_linear_transform, learned_dmd_sys, get_traj
+from koopmania.dmd import dmd, get_linear_transform, learned_dmd_sys
+from koopmania.trajectory import get_traj
 from koopmania.observable import IdentityObservable, KoopmanObservable
+from koopmania.system import ContinuousSystem, KoopmanContinuousSystem
 import functools
+from scipy.linalg import logm
 
 
 def requires_trained(f):
@@ -29,35 +32,30 @@ class Estimator:
 class KoopmanSystemEstimator(Estimator):
     def __init__(self,
                  observable_fcn: KoopmanObservable,
-                 rank = 10,
-                 sampling_period = 1.0):
+                 sampling_period: float,
+                 rank = 10):
         super().__init__()
+        self.obs = observable_fcn
         self.g = observable_fcn.obs_fcn
         self.gd = observable_fcn.obs_grad
         self.rank = rank
         self.sampling_period = sampling_period
         self._X, self._Xn = None, None
+        self._system, self._A, self._B = None, None, None
 
     def fit(self, X: np.ndarray, Xn: np.ndarray) -> None:
-        self.dynamics = learned_dmd_sys(X, Xn, self.g, self.gd, self.sampling_period, self.rank)
-        self._X, self._Xn = X, Xn
+        Yc, Ycp = np.hstack([self.g(x) for x in X.T]), np.hstack([self.g(x) for x in Xn.T])
+        mucy, Phicy = dmd(Yc, Ycp, r=self.rank)
+        self._A = Phicy @ np.diag(mucy) @ np.linalg.pinv(Phicy)
+        self._B = logm(self._A) / self.sampling_period
+        self._system = KoopmanContinuousSystem(X.shape[0], self._B, self.obs)
         self.has_trained = True
 
     @requires_trained
-    def predict_derivative(self, X: np.ndarray) -> np.ndarray:
-        return np.array([self.dynamics(x) for x in X])
-
-    @requires_trained
     def predict(self, X: np.ndarray) -> np.ndarray:
-        """FIXME: TODO: higher order solving?"""
-        return get_traj(self.dynamics, X.flatten(), tmax=self.sampling_period, sampling_period=self.sampling_period)
+        return np.array([self._system.trajectory(x, (0.0, self.sampling_period), self.sampling_period)[-1] for x in X])
 
     @property
     @requires_trained
-    def linear_continuous_transform(self) -> np.ndarray:
-        return get_linear_transform(self._X, self._Xn, self.g, self.sampling_period, self.rank, True)
-
-    @property
-    @requires_trained
-    def linear_transform(self) -> np.ndarray:
-        return get_linear_transform(self._X, self._Xn, self.g, self.sampling_period, self.rank, False)
+    def system(self) -> KoopmanContinuousSystem:
+        return self._system
