@@ -1,6 +1,6 @@
-# Koopmania: Library for Data-Driven Koopman Analyses
+# Koopmania: Library for Data-Driven Koopman Analysis
 
-This is a (under development) little library to help me with research involving Koopman
+This is a (work in progress) little library to help me with research involving Koopman
 operators. It features
 * Estimators - scikit-like estimators to fit systems from data. These can be
 continuous or discrete time systems.
