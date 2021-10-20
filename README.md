@@ -65,7 +65,7 @@ est.predict(initial_value)
 
 ### Visualize Systems
 ```python
-import koopmania.visualize as kviz
+import koopmania.visualizer as kviz
 import matplotlib.pyplot as plt
 
 
