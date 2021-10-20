@@ -1,5 +1,7 @@
 # Koopmania: Library for Koopman Operator Based Data-Driven Analysis
 
+![system estimation](./documentation/estimation.svg)
+
 This is a (work in progress) little library to help me with research involving Koopman
 operators. It features
 * Estimators - scikit-like estimators to fit systems from data. These can be

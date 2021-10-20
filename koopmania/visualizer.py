@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib.colors import to_rgb, to_rgba
 
 
 class SystemViewer:
@@ -61,7 +62,26 @@ class SystemViewer:
         akw = {} if arrow_kwargs is None else arrow_kwargs
         skw = {} if scatter_kwargs is None else scatter_kwargs
         visible_dims = fsetting['visible_dims']
-        training_data_plot(ax, Xt, Xtp, visible_dims, scatter_kwargs=skw, arrow_kwargs=akw)
+
+        Xta = np.array([self.get_state(xi, fsetting) for xi in Xt.T]).T
+        dt = np.linalg.norm(Xt - Xta, axis=0)
+        #dt = 1 / (dt + 1.0)
+        #dt /= max(dt)
+        if not np.isclose(max(dt), 0.0):
+            dt /= max(dt)
+        dt = 1 - dt
+
+        Xtpa = np.array([self.get_state(xi, fsetting) for xi in Xtp.T]).T
+        dta = np.linalg.norm(Xtp - Xtpa, axis=0)
+        #dta = 1 / (dta + 1.0)
+        #dta /= max(dta)
+        if not np.isclose(max(dta), 0.0):
+            dta /= max(dta)
+        dta = 1 - dta
+
+        alphas = np.hstack((dt, dta))
+
+        training_data_plot(ax, Xt, Xtp, visible_dims, alphas=alphas, scatter_kwargs=skw, arrow_kwargs=akw)
         self.apply_ax(ax)
 
     def plot_trajectory(self, ax, traj, plot_kwargs=None, **settings):
@@ -89,7 +109,7 @@ def arrow_plot(ax, arrow_fcn, xlim, ylim, number, **kwargs):
     ax.quiver(x, y, u, v, **defaults)
 
 
-def training_data_plot(ax, X, Xp, visible_dims, scatter_kwargs=None, arrow_kwargs=None):
+def training_data_plot(ax, X, Xp, visible_dims, alphas=None, scatter_kwargs=None, arrow_kwargs=None):
     scatter = {'s': 5, 'label': 'Training Data'}
     X, Xp = X[list(visible_dims), :], Xp[list(visible_dims), :]
 
@@ -100,8 +120,29 @@ def training_data_plot(ax, X, Xp, visible_dims, scatter_kwargs=None, arrow_kwarg
     if arrow_kwargs is not None:
         arrow.update(arrow_kwargs)
 
+    if alphas is not None:
+        salphas = scatter.get('alpha', 1.0) * alphas
+        r, g, b = to_rgb(scatter.get('c', 'b'))
+        color = [(r, g, b, alpha) for alpha in salphas]
+
+        if 'alpha' in scatter:
+            del scatter['alpha']
+        scatter['c'] = color
+
+        if 'alpha' in arrow:
+            del arrow['alpha']
+        if 'edgecolor' in arrow:
+            del arrow['edgecolor']
+
+        r, g, b = to_rgb(arrow.get('color', 'b'))
+        colora = [(r, g, b, alpha) for alpha in salphas]
+
     # plot training data
     ax.scatter(*np.hstack((X, Xp)), **scatter)
 
-    for x0, x1 in zip(X.T, Xp.T):
-      ax.arrow(*x0, *(x1-x0), **arrow)
+    if alphas is None:
+        for x0, x1 in zip(X.T, Xp.T):
+          ax.arrow(*x0, *(x1-x0), **arrow)
+    else:
+        for ai, (x0, x1) in zip(colora, zip(X.T, Xp.T)):
+            ax.arrow(*x0, *(x1-x0), color=ai, **arrow)
